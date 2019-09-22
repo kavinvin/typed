@@ -14,7 +14,7 @@ class Numpy(Type):
         self.dtype = dtype
     def check(self, value):
         if not isinstance(value, np.ndarray):
-            raise Exception('{} is not numpy array'.format(value.__repr__()))
+            raise TypeError('{} is not numpy array'.format(value.__repr__()))
         if self.shape:
             if not self.shape == value.shape:
                 raise TypeError('Shape {} does not conform to expected type {}'.format(value.shape, self.shape))
@@ -41,7 +41,7 @@ class Numpy(Type):
         return self.__repr__()
 
 def incorrect_arg_type(arg_value, arg_name, arg_type, signature):
-    message = '{} does not conform to "{}" in {}'.format(arg_value.__repr__(), arg_name, signature)
+    message = '{} does not conform to {} in {}'.format(arg_value.__repr__(), arg_name, signature)
     return TypeError(message)
 
 def check_type(arg_name, arg_type, arg_value, signature):
@@ -51,9 +51,7 @@ def check_type(arg_name, arg_type, arg_value, signature):
         except TypeError as e:
             raise incorrect_arg_type(arg_value, arg_name, arg_type, signature) from TypeError(str(e))
     elif not isinstance(arg_value, arg_type):
-
-        message += signature
-        raise TypeError(message)
+        raise incorrect_arg_type(arg_value, arg_name, arg_type, signature)
 
 def typed(f):
     import inspect
@@ -76,7 +74,13 @@ def typed(f):
             arg_type = parameter.annotation
             check_type(arg_name, arg_type, arg_value, f.__name__ + str(signature))
 
+        result = f(*args, **kwargs)
 
-        return f(*args, **kwargs)
+        if not signature.return_annotation == inspect._empty:
+            check_type('return type', signature.return_annotation, result, f.__name__ + str(signature))
+
+        return result
 
     return wrapper
+
+
